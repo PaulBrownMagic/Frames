@@ -9,7 +9,8 @@
 	logtalk_load(lgtunit(loader)),
 	logtalk_load([
 		calculator_protocol,
-		frames
+		frames,
+		slimowl_inheritance
 	], [
 		source_data(on),
 		debug(on)

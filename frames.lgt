@@ -8,28 +8,30 @@
 	]).
 
 	:- dynamic(facet_/2).
+	:- private(facet_/2).
+	:- mode(facet_(+atom, -object), zero_or_one).
+	:- info(facet_/2, [
+		comment is 'The object to query for a particular facet',
+		argnames is ['Facet', 'Object']
+	]).
 
 	:- uses(navltree, [
 		lookup_in/3
-		]).
-	:- uses(avltree, [
-		lookup/3,
-		keys/2,
-		empty/1,
-		delete/4,
-		as_list/2
 		]).
 
 	:- public(set_facet/2).
 	:- mode(set_facet(+atom, +object), zero_or_one).
 	:- info(set_facet/2, [
 		comment is 'Set an object used to resolve particular facets',
-		argnames is ['Facet', 'Delegator']
+		argnames is ['Facet', 'Handler'],
+		exceptions is ['Handler doesn\'t conform to the required protocol'-error(domain_error(protocol_relation, 'Handler'), logtalk('Msg'), 'Call')]
 	]).
 	set_facet(calculate, Object) :-
-		implements_protocol(Object, calculator_protocol),
-		retractall(facet_(calculate, _)),
-		assertz(facet_(calculate, Object)).
+		(	conforms_to_protocol(Object, calculator_protocol)
+		->	retractall(facet_(calculate, _)),
+			assertz(facet_(calculate, Object))
+		;	domain_error(protocol_relation, Object)
+		).
 
 	:- public(get_frame/3).
 	:- mode(get_frame(?nested_dictionary, ?atomic, +list), zero_or_more).
@@ -42,7 +44,7 @@
 			]
 	]).
 	get_frame(Collection, Subject, Slots) :-
-		(	once(var(Slots) ; var(Collection))
+		(	once((var(Slots) ; var(Collection)))
 		->  instantiation_error
 		;	meta::map(get_slot(Collection, Subject), Slots)
 		).
@@ -67,25 +69,14 @@
 	get_slot(Collection, Subject, Key-Value) :-
 		facet_(calculate, Calculator),
 		Calculator::calculate(Collection, Subject, Key, Value).
-	% Frame is NamedIndividual, inherit from class
-	get_slot(Collection, Subject, Key-Value) :-
-		Key \== type,  % type isn't transitive, guard from redundant reasoning
-		lookup_in([Subject, type], Values, Collection),  % check for individual
-		slot_value(Values, 'NamedIndividual'),
-		lookup_in([Subject, type], Values, Collection),  % find its class(es)
-		slot_value(Values, Class),
-		Class \== 'NamedIndividual',  % skip this one, nothing to inherit
-		get_slot(Collection, Class, Key-Value), % inherit
-		Key \== type, Key \== subClassOf.  % Individuals don't inherit these
-	% Frame is a Class, inheret from parents
-	get_slot(Collection, Subject, Key-Value) :-
-		Key \== type,  % type isn't transitive, guard from redundant reasoning
-		lookup_in([Subject, subClassOf], Values, Collection), % only class has subClassOf
-		slot_value(Values, Parent),
-		get_slot(Collection, Parent, Key-Value),  % inherit
-		Key \== type.  % type isn't inherited
 
 	% Extract the value from a slot
+	:- public(slot_value/2).
+	:- mode(slot_value(+term, ?value), zero_or_more).
+	:- info(slot_value/2, [
+		comment is 'Extract the value from the leaf of a slot',
+		argnames is ['SlotValue', 'Value']
+	]).
 	slot_value(Values, Value) :-
 		(	list::valid(Values) % If it's a list
 		->  list::member(Value, Values)  % yield from it

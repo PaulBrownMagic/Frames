@@ -25,11 +25,15 @@ This framework expects the data to be represented in SPO format, meaning:
 Where there can be many of each subject, predicate, or object. See
 `test_db.json` for an example. JSON is not required, but it does work well.
 
-In terms of the language used, `type` is used to denote the slot describing
+In terms of the language used, two calculation categories are provided.
+`slimowl_inheritance` uses `type` to denote the slot describing
 what type of thing the subject is: a 'Class', or in the case of an instance, a
 'NamedIndividual' and what class it is instantiating. `subClassOf` is used for
 the slot that is used for inheritence. This is to stay close to the language of
-the semantic web.
+the semantic web. `classic_inheritance` uses the classic terms `isa` and `ako`
+for "is a" and "a kind of", where `isa` denotes instantiation and `ako` denotes
+subsumption. You can re-use these as you wish, or create your own for your
+use-case and set it as a daemon.
 
 ## Adding daemons
 Daemons are added as facets to `frames`. Simply choose the correct protocol,
@@ -38,7 +42,8 @@ implement it as an object, and assign that object as a facet. The test-case
 
 ```prolog
 :- object(height_calculator,
-	implements(calculator_protocol)).
+	implements(calculator_protocol),
+	imports(slimowl_inheritance)).
 
 	calculate(Frames, Subject, height(inches), Height) :-
 		frames::get_slot(Frames, Subject, height-Height).
