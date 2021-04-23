@@ -45,7 +45,7 @@
 		test_collection(Frames),
 		frames::get_frame(Frames, 'Ivy', [_Key-_Value]).
 
-	test(calculate_attred, true(Inches-CM == 12-30.48)) :-
+	test(calculate_attrs, true(Inches-CM == 12-30.48)) :-
 		test_collection(Frames),
 		create_object(
 			height_calculator,
@@ -53,11 +53,10 @@
 			[],
 			[(calculate(Coll, Sub, height(inches), H) :-
 				frames::get_slot(Coll, Sub, height-H)),
-				(calculate(Coll, Sub, height(cm), V) :-
+			 (calculate(Coll, Sub, height(cm), V) :-
 				frames::get_slot(Coll, Sub, height-H),
 				V is H*2.54)]),
 		frames::set_facet(calculate, height_calculator),
-		frames::get_frame(Frames, 'Carrot', [height(inches)-Inches]),
-		frames::get_frame(Frames, 'Carrot', [height(cm)-CM]).
+		frames::get_frame(Frames, 'Carrot', [height(inches)-Inches, height(cm)-CM]).
 
 :- end_object.
