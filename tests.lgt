@@ -44,6 +44,11 @@
 	test(no_such_frame, fail) :-
 		test_collection(Frames),
 		frames::get_frame(Frames, 'Ivy', [_Key-_Value]).
+	test(var_collection, error(instantiation_error)) :-
+		frames::get_frame(_Var, subject, [key-value]).
+	test(var_pairs, error(instantiation_error)) :-
+		test_collection(Frames),
+		frames::get_frame(Frames, subject, _Var).
 
 	test(calculate_attrs, true(Inches-CM == 12-30.48)) :-
 		test_collection(Frames),

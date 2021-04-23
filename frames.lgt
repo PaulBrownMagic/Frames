@@ -35,17 +35,30 @@
 	:- mode(get_frame(?nested_dictionary, ?atomic, +list), zero_or_more).
 	:- info(get_frame/3, [
 		comment is 'Read the value of the slots in the frame',
-		argnames is ['FrameCollection', 'Subject', 'Slots']
+		argnames is ['FrameCollection', 'Subject', 'Slots'],
+		exceptions is [
+			'``Slots`` is a variable'-error(instantiation_error, logtalk(get_frame('FrameCollection', 'Subject', 'Slots'), 'Call')),
+			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_frame('FrameCollection', 'Subject', 'Slots'), 'Call'))
+			]
 	]).
 	get_frame(Collection, Subject, Slots) :-
-		meta::map(get_slot(Collection, Subject), Slots).
+		(	once(var(Slots) ; var(Collection))
+		->  instantiation_error
+		;	meta::map(get_slot(Collection, Subject), Slots)
+		).
 
 	:- public(get_slot/3).
 	:- mode(get_slot(?nested_dictionary, ?atomic, ?pair), zero_or_more).
 	:- info(get_slot/3, [
 		comment is 'Read the value of a slot in the frame',
-		argnames is ['FrameCollection', 'Subject', 'Key-Value']
+		argnames is ['FrameCollection', 'Subject', 'Key-Value'],
+		exceptions is [
+			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_slot('FrameCollection', 'Subject', 'Key-Value'), 'Call'))
+			]
 	]).
+	get_slot(Collection, _, _) :-
+		var(Collection),
+		instantiation_error.
 	% Direct from frame
 	get_slot(Collection, Subject, Key-Value) :-
 		lookup_in([Subject, Key], Values, Collection),
