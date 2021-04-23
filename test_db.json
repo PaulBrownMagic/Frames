@@ -1,0 +1,124 @@
+{
+    "Plant": {
+        "type": [
+            "Class"
+        ]
+    },
+    "Vegetable": {
+        "type": [
+            "Class"
+        ],
+        "subClassOf": [
+            "Plant"
+        ]
+    },
+    "Herb": {
+        "type": [
+            "Class"
+        ],
+        "subClassOf": [
+            "Plant"
+        ],
+        "edible": [
+            "leaves"
+        ]
+    },
+    "Flower": {
+        "type": [
+            "Class"
+        ],
+        "subClassOf": [
+            "Plant"
+        ]
+    },
+    "Carrot": {
+        "type": [
+            "NamedIndividual",
+            "Vegetable"
+        ],
+        "spacing": 16,
+        "family": "Carrot",
+        "height": 12
+    },
+    "Onion": {
+        "type": [
+            "NamedIndividual",
+            "Vegetable"
+        ],
+        "spacing": 16,
+        "family": "Lily",
+        "height": 12
+    },
+    "Potato": {
+        "type": [
+            "NamedIndividual",
+            "Vegetable"
+        ],
+        "spacing": 4,
+        "family": "Nightshade",
+        "height": 24
+    },
+    "Tomato": {
+        "type": [
+            "NamedIndividual",
+            "Vegetable"
+        ],
+        "spacing": 1,
+        "family": "Nightshade",
+        "height": 72
+    },
+    "Basil": {
+        "type": [
+            "NamedIndividual",
+            "Herb"
+        ],
+        "spacing": 4,
+        "family": "Mint",
+        "height": 12
+    },
+    "Chive": {
+        "type": [
+            "NamedIndividual",
+            "Herb"
+        ],
+        "spacing": 1,
+        "family": "Lily",
+        "height": 12
+    },
+    "Mint": {
+        "type": [
+            "NamedIndividual",
+            "Herb"
+        ],
+        "spacing": 1,
+        "family": "Mint",
+        "height": 8
+    },
+    "Marigold": {
+        "type": [
+            "NamedIndividual",
+            "Flower"
+        ],
+        "spacing": 4,
+        "family": "Daisy",
+        "height": 10
+    },
+    "Petunia": {
+        "type": [
+            "NamedIndividual",
+            "Flower"
+        ],
+        "spacing": 4,
+        "family": "Nightshade",
+        "height": 18
+    },
+    "Salvia": {
+        "type": [
+            "NamedIndividual",
+            "Flower"
+        ],
+        "spacing": 4,
+        "family": "Mint",
+        "height": 18
+    }
+}
