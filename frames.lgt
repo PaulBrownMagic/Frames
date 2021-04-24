@@ -1,3 +1,5 @@
+:- op(50, xfy, to).
+
 :- object(frames).
 
 	:- info([
@@ -16,7 +18,12 @@
 	]).
 
 	:- uses(navltree, [
-		lookup_in/3
+		lookup_in/3,
+		update_in/5,
+		delete_in/4
+		]).
+	:- uses(avltree,
+		[ keys/2
 		]).
 
 	:- public(set_facet/2).
@@ -26,12 +33,21 @@
 		argnames is ['Facet', 'Handler'],
 		exceptions is ['Handler doesn\'t conform to the required protocol'-error(domain_error(protocol_relation, 'Handler'), logtalk('Msg'), 'Call')]
 	]).
-	set_facet(calculate, Object) :-
-		(	conforms_to_protocol(Object, calculator_protocol)
-		->	retractall(facet_(calculate, _)),
-			assertz(facet_(calculate, Object))
+	set_facet(reader, Object) :-
+		(	conforms_to_protocol(Object, reader_protocol)
+		->	retractall(facet_(reader, _)),
+			assertz(facet_(reader, Object))
 		;	domain_error(protocol_relation, Object)
 		).
+
+	:- public(subjects/2).
+	:- mode(subjects(++nested_dictionary, -list), one).
+	:- info(subjects/2, [
+		comment is 'The subjects in the frame collection',
+		argnames is ['FrameCollection', 'Subjects']
+	]).
+	subjects(Frames, Subjects) :-
+		keys(Frames, Subjects).
 
 	:- public(get_frame/3).
 	:- mode(get_frame(?nested_dictionary, ?atomic, +list), zero_or_more).
@@ -39,36 +55,50 @@
 		comment is 'Read the value of the slots in the frame',
 		argnames is ['FrameCollection', 'Subject', 'Slots'],
 		exceptions is [
-			'``Slots`` is a variable'-error(instantiation_error, logtalk(get_frame('FrameCollection', 'Subject', 'Slots'), 'Call')),
 			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_frame('FrameCollection', 'Subject', 'Slots'), 'Call'))
 			]
 	]).
 	get_frame(Collection, Subject, Slots) :-
-		(	once((var(Slots) ; var(Collection)))
+		(	var(Collection)
 		->  instantiation_error
+		;	var(Slots)
+		->	findall(Key-Value, get_slot(Collection, Subject, Key-Value), Slots)
 		;	meta::map(get_slot(Collection, Subject), Slots)
 		).
+
+	:- public(get_data/3).
+	:- mode(get_data(?nested_dictionary, ?atomic, ?pair), zero_or_more).
+	:- info(get_data/3, [
+		comment is 'Read the value of a slot in the frame with no reasoning',
+		argnames is ['FrameCollection', 'Subject', 'Key-Value'],
+		exceptions is [
+			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_data('FrameCollection', 'Subject', 'Key-Value'), 'Call'))
+			]
+	]).
+	get_data(Collection, _, _) :-
+		var(Collection),
+		instantiation_error.
+	% Direct from frame
+	get_data(Collection, Subject, Key-Value) :-
+		lookup_in([Subject, Key], Values, Collection),
+		slot_value(Values, Value).
 
 	:- public(get_slot/3).
 	:- mode(get_slot(?nested_dictionary, ?atomic, ?pair), zero_or_more).
 	:- info(get_slot/3, [
-		comment is 'Read the value of a slot in the frame',
+		comment is 'Get the value of a slot in the frame, includes read facet',
 		argnames is ['FrameCollection', 'Subject', 'Key-Value'],
 		exceptions is [
-			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_slot('FrameCollection', 'Subject', 'Key-Value'), 'Call'))
+			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_data('FrameCollection', 'Subject', 'Key-Value'), 'Call'))
 			]
 	]).
-	get_slot(Collection, _, _) :-
-		var(Collection),
-		instantiation_error.
 	% Direct from frame
 	get_slot(Collection, Subject, Key-Value) :-
-		lookup_in([Subject, Key], Values, Collection),
-		slot_value(Values, Value).
+		get_data(Collection, Subject, Key-Value).
 	% Calculated
 	get_slot(Collection, Subject, Key-Value) :-
-		facet_(calculate, Calculator),
-		Calculator::calculate(Collection, Subject, Key, Value).
+		facet_(reader, Reader),
+		Reader::calculate(Collection, Subject, Key, Value).
 
 	% Extract the value from a slot
 	:- public(slot_value/2).
@@ -82,5 +112,42 @@
 		->  list::member(Value, Values)  % yield from it
 		;	Value = Values  % otherwise we've got it
 		).
+
+	:- public(update_frame/4).
+	:- mode(update_frame(++nested_dictionary, +atomic, ++list(pair), -nested_dictionary), zero_or_one).
+	:- info(update_frame/4, [
+		comment is 'Update the ``FrameCollection`` so that the slots described by ``Subject`` are as described by the key-value pairs',
+		argnames is ['OldFrames', 'Subject', 'UpdatePairs', 'NewFrames']
+	]).
+	% Should handle list slots
+	update_frame(OldFrames, _Subject, [], OldFrames).
+	update_frame(OldFrames, Subject, [Pair|UpdatePairs], NewFrames) :-
+		once((	Pair = Key-OldValue to NewValue
+			;	Pair = Key-NewValue
+			)),
+		update_in(OldFrames, [Subject, Key], OldValue, NewValue, AccFrames),
+		update_frame(AccFrames, Subject, UpdatePairs, NewFrames).
+
+	:- public(delete_frame/3).
+	:- mode(delete_frame(++nested_dictionary, +atomic, -nested_dictionary), one).
+	:- info(delete_frame/3, [
+		comment is 'Delete the frame associated with ``Subject`` from the frames',
+		argnames is ['OldFrames', 'Subject', 'NewFrames']
+	]).
+	delete_frame(OldFrames, Subject, NewFrames) :-
+		delete_in(OldFrames, [Subject], _Slots, NewFrames).
+
+	:- public(delete_frame/4).
+	:- mode(delete_frame(++nested_dictionary, +atomic, +list(pair), -nested_dictionary), one).
+	:- info(delete_frame/4, [
+		comment is 'Delete the pairs associated with ``Subject`` from the frames. Keys must be ground, values will unify.',
+		argnames is ['OldFrames', 'Subject', 'Pairs', 'NewFrames']
+	]).
+	% Should handle list slots
+	delete_frame(OldFrames, _Subject, [], OldFrames).
+	delete_frame(OldFrames, Subject, [Key-Value|DeletePairs], NewFrames) :-
+		delete_in(OldFrames, [Subject, Key], Value, AccFrames),
+		delete_frame(AccFrames, Subject, DeletePairs, NewFrames).
+
 
 :- end_object.

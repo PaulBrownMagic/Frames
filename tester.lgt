@@ -3,12 +3,11 @@
 	logtalk_load([
 		json(loader),
 		nested_dictionaries(loader),
-		dictionaries(loader),
 		meta(loader)
 	]),
 	logtalk_load(lgtunit(loader)),
 	logtalk_load([
-		calculator_protocol,
+		reader_protocol,
 		frames,
 		slimowl_inheritance
 	], [

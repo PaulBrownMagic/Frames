@@ -1,14 +1,14 @@
-:- protocol(calculator_protocol).
+:- protocol(reader_protocol).
 
 	:- info([
 		version is 1:0:0,
 		author is 'Paul Brown',
 		date is 2021-04-23,
-		comment is 'Protocol for objects that implement the calculate facet'
+		comment is 'Protocol for objects that implement the calculate facet on read'
 	]).
 
 	:- public(calculate/4).
-	:- mode(calculate(++nested_dictionary, ++atomic, ?atomic, ?term), zero_or_more).
+	:- mode(calculate(++nested_dictionary, ?atomic, ?atomic, ?term), zero_or_more).
 	:- info(calculate/4, [
 		comment is 'For the given ``Frames`` and ``Subject``, calculate the ``Value`` of the ``Slot``',
 		arguments is [

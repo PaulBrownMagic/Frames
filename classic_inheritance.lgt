@@ -1,5 +1,5 @@
 :- category(classic_inheritance,
-	implements(calculator_protocol)).
+	implements(reader_protocol)).
 
 	:- info([
 		version is 1:0:0,
@@ -8,20 +8,14 @@
 		comment is 'Uses classic terms to manage inheritance (isa, ako)'
 	]).
 
-	:- uses(navltree, [
-		lookup_in/3
-		]).
-
 	% instance inheritance
 	calculate(Frames, Subject, Key, Value) :-
-		lookup_in([Subject, isa], Values, Frames),  % find its class(es)
-		frames::slot_value(Values, Class),
+		frames::get_data(Frames, Subject, isa-Class),  % find its class(es)
 		frames::get_slot(Frames, Class, Key-Value). % inherit
 
 	% class inheritance: dfs, also consider bfs and fish-hook
 	calculate(Frames, Subject, Key, Value) :-
-		lookup_in([Subject, ako], Values, Frames), % find its parents
-		frames::slot_value(Values, Parent),
+		frames::get_data(Frames, Subject, ako-Parent), % find its parents
 		frames::get_slot(Frames, Parent, Key-Value).  % inherit
 
 :- end_category.
