@@ -1,12 +1,13 @@
 :- op(50, xfy, to).
 
-:- object(frames).
+:- object(frames(_Facets_)).
 
 	:- info([
 		version is 1:0:0,
 		author is 'Paul Brown',
 		date is 2021-04-23,
-		comment is 'A Frame Collection is a dataset consisting of frames'
+		comment is 'A Frame Collection is a dataset consisting of frames',
+		parameters is ['Facets'-'A dictionary of facet objects']
 	]).
 
 	:- dynamic(facet_/2).
@@ -22,23 +23,27 @@
 		update_in/5,
 		delete_in/4
 		]).
-	:- uses(avltree,
-		[ keys/2
+	:- uses(avltree, [
+		keys/2,
+		lookup/3
 		]).
 
-	:- public(set_facet/2).
-	:- mode(set_facet(+atom, +object), zero_or_one).
-	:- info(set_facet/2, [
-		comment is 'Set an object used to resolve particular facets',
+	:- public(get_facet/2).
+	:- mode(get_facet(+atom, +object), zero_or_one).
+	:- info(get_facet/2, [
+		comment is 'Get the object used to resolve particular facets from the parameters',
 		argnames is ['Facet', 'Handler'],
 		exceptions is ['Handler doesn\'t conform to the required protocol'-error(domain_error(protocol_relation, 'Handler'), logtalk('Msg'), 'Call')]
 	]).
-	set_facet(reader, Object) :-
-		(	conforms_to_protocol(Object, reader_protocol)
-		->	retractall(facet_(reader, _)),
-			assertz(facet_(reader, Object))
-		;	domain_error(protocol_relation, Object)
-		).
+	get_facet(Facet, Object) :-
+		nonvar(_Facets_),
+		lookup(Facet, Object, _Facets_),
+		facet_protocol(Facet, Protocol),
+		once((	conforms_to_protocol(Object, Protocol)
+			;	domain_error(protocol_relation, Object)
+			)).
+
+		facet_protocol(reader, reader_protocol).
 
 	:- public(subjects/2).
 	:- mode(subjects(++nested_dictionary, -list), one).
@@ -61,10 +66,18 @@
 	get_frame(Collection, Subject, Slots) :-
 		(	var(Collection)
 		->  instantiation_error
+		;   get_facet(reader, Reader)
+		->	get_frame(Collection, Reader, Subject, Slots)
 		;	var(Slots)
-		->	findall(Key-Value, get_slot(Collection, Subject, Key-Value), Slots)
-		;	meta::map(get_slot(Collection, Subject), Slots)
+		->	findall(Key-Value, get_data(Collection, Subject, Key-Value), Slots)
+		;	meta::map(get_data(Collection, Subject), Slots)
 		).
+	get_frame(Collection, Reader, Subject, Slots) :-
+		(	var(Slots)
+		->	findall(Key-Value, get_slot(Collection, Reader, Subject, Key-Value), Slots)
+		;	meta::map(get_slot(Collection, Reader, Subject), Slots)
+		).
+
 
 	:- public(get_data/3).
 	:- mode(get_data(?nested_dictionary, ?atomic, ?pair), zero_or_more).
@@ -92,13 +105,15 @@
 			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_data('FrameCollection', 'Subject', 'Key-Value'), 'Call'))
 			]
 	]).
-	% Direct from frame
 	get_slot(Collection, Subject, Key-Value) :-
+		(	get_facet(reader, Reader)
+		->	get_slot(Collection, Reader, Subject, Key-Value)
+		;	get_data(Collection, Subject, Key-Value)
+		).
+	get_slot(Collection, _Reader, Subject, Key-Value) :-
 		get_data(Collection, Subject, Key-Value).
-	% Calculated
-	get_slot(Collection, Subject, Key-Value) :-
-		facet_(reader, Reader),
-		Reader::calculate(Collection, Subject, Key, Value).
+	get_slot(Collection, Reader, Subject, Key-Value) :-
+		Reader::calculate(Collection, _Facets_, Subject, Key, Value).
 
 	% Extract the value from a slot
 	:- public(slot_value/2).
@@ -148,6 +163,5 @@
 	delete_frame(OldFrames, Subject, [Key-Value|DeletePairs], NewFrames) :-
 		delete_in(OldFrames, [Subject, Key], Value, AccFrames),
 		delete_frame(AccFrames, Subject, DeletePairs, NewFrames).
-
 
 :- end_object.

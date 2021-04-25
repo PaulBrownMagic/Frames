@@ -37,7 +37,7 @@ use-case and set it as a daemon.
 
 ## Adding daemons
 Daemons are added as facets to `frames`. Simply choose the correct protocol,
-implement it as an object, and assign that object as a facet. The test-case
+implement it as an object, and pass that object as a facet. The test-case
 `calculate_attrs` is a good example. It works like so:
 
 ```prolog
@@ -58,10 +58,9 @@ implement it as an object, and assign that object as a facet. The test-case
 This is then added as a facet, enabling these queries:
 
 ```prolog
-?- frames::set_facet(calculate, height_calculator).
-**yes
+?- avltree::as_dictionary([reader-height_calculator], Facets),
+   frames(Facets)::get_frame(TestDBFrames, 'Carrot', [height(inches)-Inches, height(cm)-CM]).
 
-?- frames::get_frame(TestDBFrames, 'Carrot', [height(inches)-Inches, height(cm)-CM]).
 Inches = 12,
 CM = 30.48 .
 ```
@@ -73,8 +72,32 @@ calculator interface into which you import your different kinds of calculators.
 In this way you can compose sophisticated knowledge bases.
 
 ## Frame queries
+By CRUD:
 
-The framework currently only supports reading queries: `get_frame/3` and
-`get_slot/3`. Both take the collection of frames and a subject as their first 2
-arguments. `get_slot/3` then takes a single `Key-Value` pair, whereas
-`get_frame/3` accepts a list of pairs. See above examples.
+### Create
+
+- Not yet
+
+### Read
+
+- `get_frame/3` : `get_frame(FrameCollection, Subject, [Key-Value|Pairs])`, uses
+	reasoning, query many slots of a frame.
+
+- `get_slot/3` : `get_slot(FrameCollection, Subject, Key-Value)`, uses reasoning,
+	only a single slot for a frame.
+
+- `get_data/3` : `get_data(FrameCollection, Subject, Key-Value)`, no reasoning,
+	just does a lookup in the frame collection.
+
+### Update
+
+- WIP: Single values supported but not lists yet
+
+### Delete
+
+- `delete_frame/3` : `delete_frame(OldFrames, Subject, NewFrames)`, removes the
+	whole frame from the collection, providing the new collection. Only deletes
+	the frame, it doesn't delete references to the frame. WIP: No daemon support
+	yet.
+- WIP: Single values supported but not lists yet
+- WIP: Purge frame, like delete frame but removing reference to it as well.
