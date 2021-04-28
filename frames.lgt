@@ -10,14 +10,6 @@
 		parameters is ['Facets'-'A dictionary of facet objects']
 	]).
 
-	:- dynamic(facet_/2).
-	:- private(facet_/2).
-	:- mode(facet_(+atom, -object), zero_or_one).
-	:- info(facet_/2, [
-		comment is 'The object to query for a particular facet',
-		argnames is ['Facet', 'Object']
-	]).
-
 	:- uses(navltree, [
 		lookup_in/3,
 		update_in/5,
@@ -43,7 +35,7 @@
 			;	domain_error(protocol_relation, Object)
 			)).
 
-		facet_protocol(reader, reader_protocol).
+	facet_protocol(reader, reader_protocol).
 
 	:- public(subjects/2).
 	:- mode(subjects(++nested_dictionary, -list), one).
@@ -105,6 +97,9 @@
 			'``FrameCollection`` is a variable'-error(instantiation_error, logtalk(get_data('FrameCollection', 'Subject', 'Key-Value'), 'Call'))
 			]
 	]).
+	get_slot(Collection, _, _) :-
+		var(Collection),
+		instantiation_error.
 	get_slot(Collection, Subject, Key-Value) :-
 		(	get_facet(reader, Reader)
 		->	get_slot(Collection, Reader, Subject, Key-Value)
@@ -115,15 +110,14 @@
 	get_slot(Collection, Reader, Subject, Key-Value) :-
 		Reader::calculate(Collection, _Facets_, Subject, Key, Value).
 
-	% Extract the value from a slot
 	:- public(slot_value/2).
 	:- mode(slot_value(+term, ?value), zero_or_more).
 	:- info(slot_value/2, [
-		comment is 'Extract the value from the leaf of a slot',
+		comment is 'Extract the value from the slot',
 		argnames is ['SlotValue', 'Value']
 	]).
 	slot_value(Values, Value) :-
-		(	list::valid(Values) % If it's a list
+		(	is_list(Values) % If it's a list
 		->  list::member(Value, Values)  % yield from it
 		;	Value = Values  % otherwise we've got it
 		).
@@ -134,14 +128,27 @@
 		comment is 'Update the ``FrameCollection`` so that the slots described by ``Subject`` are as described by the key-value pairs',
 		argnames is ['OldFrames', 'Subject', 'UpdatePairs', 'NewFrames']
 	]).
+	% facets:
+	%	- before_update_call (eg. validation, permission),
+	%	- before_update_alter_pair (eg. string/unit manipulation),
+	%	- after_update_call (eg. logging)
 	% Should handle list slots
 	update_frame(OldFrames, _Subject, [], OldFrames).
 	update_frame(OldFrames, Subject, [Pair|UpdatePairs], NewFrames) :-
 		once((	Pair = Key-OldValue to NewValue
 			;	Pair = Key-NewValue
 			)),
-		update_in(OldFrames, [Subject, Key], OldValue, NewValue, AccFrames),
+		update_frame_(OldFrames, Subject, Key, OldValue, NewValue, AccFrames),
 		update_frame(AccFrames, Subject, UpdatePairs, NewFrames).
+
+	update_frame_(OldFrames, Subject, Key, OldValue, NewValue, AccFrames) :-
+		lookup_in([Subject, Key], Values, OldFrames),
+		(	is_list(Values)
+		->  nonvar(OldValue),
+			list::select(OldValue, Values, NewValue, NewValues),
+			update_in(OldFrames, [Subject, Key], _, NewValues, AccFrames)
+		;	update_in(OldFrames, [Subject, Key], OldValue, NewValue, AccFrames)
+		).
 
 	:- public(delete_frame/3).
 	:- mode(delete_frame(++nested_dictionary, +atomic, -nested_dictionary), one).
@@ -149,6 +156,9 @@
 		comment is 'Delete the frame associated with ``Subject`` from the frames',
 		argnames is ['OldFrames', 'Subject', 'NewFrames']
 	]).
+	% facets:
+	%	- before_delete_call (eg. permission),
+	%	- after_delete_call (eg. logging)
 	delete_frame(OldFrames, Subject, NewFrames) :-
 		delete_in(OldFrames, [Subject], _Slots, NewFrames).
 
@@ -158,10 +168,24 @@
 		comment is 'Delete the pairs associated with ``Subject`` from the frames. Keys must be ground, values will unify.',
 		argnames is ['OldFrames', 'Subject', 'Pairs', 'NewFrames']
 	]).
+	% facets:
+	%	- before_delete_call (eg. permission),
+	%	- after_delete_call (eg. logging)
 	% Should handle list slots
 	delete_frame(OldFrames, _Subject, [], OldFrames).
 	delete_frame(OldFrames, Subject, [Key-Value|DeletePairs], NewFrames) :-
-		delete_in(OldFrames, [Subject, Key], Value, AccFrames),
+		delete_frame_(OldFrames, Subject, Key, Value, AccFrames),
 		delete_frame(AccFrames, Subject, DeletePairs, NewFrames).
+
+	delete_frame_(OldFrames, Subject, Key, Value, AccFrames):-
+		lookup_in([Subject, Key], Values, OldFrames),
+		(	is_list(Values)
+		->	(	Values = [Value]
+			->	delete_in(OldFrames, [Subject, Key], Values, AccFrames)
+			;	list::select(Value, Values, Deleted),
+				update_in(OldFrames, [Subject, Key], Values, Deleted, AccFrames)
+			)
+		;	delete_in(OldFrames, [Subject, Key], Value, AccFrames)
+		).
 
 :- end_object.

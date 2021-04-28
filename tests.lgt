@@ -64,7 +64,11 @@
 	test(plain_slots, true(Family-Spacing == 'Lily'-16)) :-
 		test_collection(Frames),
 		facet_set(regular, Facets),
-		frames(Facets)::get_frame(Frames, 'Onion', [family-Family, spacing-Spacing]).
+		frames(Facets)::get_frame(
+			Frames,
+			'Onion',
+			[family-Family,
+			spacing-Spacing]).
 
 	test(list_slots, true(Types == ['NamedIndividual', 'Herb'])):-
 		test_collection(Frames),
@@ -97,6 +101,12 @@
 		facet_set(regular, Facets),
 		frames(Facets)::get_frame(_Var, subject, [key-value]).
 
+	test(get_frame_query_with_no_reader, true) :-
+		test_collection(Frames),
+		avltree::new(Facets),
+		frames(Facets)::get_frame(Frames, 'Mint', [type-'Herb']),
+		\+ frames(Facets)::get_frame(Frames, 'Mint', [edible-_]).
+
 	% READING - Reader Facet
 	test(reader_facet, true(Sparse == 8)) :-
 		test_collection(Frames),
@@ -107,7 +117,6 @@
 		test_collection(Frames),
 		facet_set(height, Facets),
 		frames(Facets)::get_frame(Frames, 'Carrot', [height(inches)-Inches, height(cm)-CM]).
-
 
 	% UPDATING
 	test(update_key_value, true(Updated == 1)) :-
@@ -122,23 +131,10 @@
 		frames(Facets)::update_frame(Frames, 'Basil', [spacing-4 to 1], UpdatedFrames),
 		frames(Facets)::get_frame(UpdatedFrames, 'Basil', [spacing-Updated]).
 
-	test(update_add_new_slot, true(Season == summer)) :-
-		test_collection(Frames),
-		facet_set(regular, Facets),
-		frames(Facets)::update_frame(Frames, 'Tomato', [growing_season-summer], UpdatedFrames),
-		frames(Facets)::get_frame(UpdatedFrames, 'Tomato', [growing_season-Season]).
-
-	test(update_add_list_element, true(Sorted == ['Herb', 'NamedIndividual', 'Vegetable'])) :-
-		test_collection(Frames),
-		facet_set(regular, Facets),
-		frames(Facets)::update_frame(Frames, 'Onion', [subClassOf-'Herb'], UpdatedFrames),
-		findall(Type, frames(Facets)::get_data(UpdatedFrames, 'Onion', type-Type), Types),
-		list::sort(Types, Sorted).
-
 	test(update_change_list_element, true(Sorted == ['Herb', 'NamedIndividual'])) :-
 		test_collection(Frames),
 		facet_set(regular, Facets),
-		frames(Facets)::update_frame(Frames, 'Onion', [subClassOf-'Vegetable' to 'Herb'], UpdatedFrames),
+		frames(Facets)::update_frame(Frames, 'Onion', [type-'Vegetable' to 'Herb'], UpdatedFrames),
 		findall(Type, frames(Facets)::get_data(UpdatedFrames, 'Onion', type-Type), Types),
 		list::sort(Types, Sorted).
 
@@ -151,7 +147,12 @@
 	test(update_change_list_element_mismatch, fail) :-
 		test_collection(Frames),
 		facet_set(regular, Facets),
-		frames(Facets)::update_frame(Frames, 'Onion', [subClassOf-'Garlic' to 'Herb'], _UpdatedFrames).
+		frames(Facets)::update_frame(Frames, 'Onion', [type-'Garlic' to 'Herb'], _UpdatedFrames).
+
+	test(update_change_list_element_var_oldvalue, fail) :-
+		test_collection(Frames),
+		facet_set(regular, Facets),
+		frames(Facets)::update_frame(Frames, 'Onion', [type-_Var to 'Herb'], _UpdatedFrames).
 
 	% DELETING
 	test(delete_subject, true) :-
@@ -171,13 +172,27 @@
 	test(delete_list_element, true(Parents = ['NamedIndividual'])) :-
 		test_collection(Frames),
 		facet_set(regular, Facets),
-		frames(Facets)::delete_frame(Frames, 'Onion', [subClassOf-'Vegetable'], UpdatedFrames),
-		findall(Class, frames(Facets)::get_data(UpdatedFrames, 'Onion', [subClassOf-Class]), Parents).
+		frames(Facets)::delete_frame(Frames, 'Onion', [type-'Vegetable'], UpdatedFrames),
+		findall(Class, frames(Facets)::get_data(UpdatedFrames, 'Onion', type-Class), Parents).
 
 	% DELETING - Unhappy Paths
 	test(delete_key_value_mismatch, fail) :-
 		test_collection(Frames),
 		facet_set(regular, Facets),
 		frames(Facets)::delete_frame(Frames, 'Potato', [spacing-9, height-1], _UpdatedFrames).
+
+	% ADDING
+	-test(add_new_slot, true(Season == summer)) :-
+		test_collection(Frames),
+		facet_set(regular, Facets),
+		frames(Facets)::add_frame(Frames, 'Tomato', [growing_season-summer], UpdatedFrames),
+		frames(Facets)::get_frame(UpdatedFrames, 'Tomato', [growing_season-Season]).
+
+	-test(update_add_list_element, true(Sorted == ['Herb', 'NamedIndividual', 'Vegetable'])) :-
+		test_collection(Frames),
+		facet_set(regular, Facets),
+		frames(Facets)::update_frame(Frames, 'Onion', [subClassOf-'Herb'], UpdatedFrames),
+		findall(Type, frames(Facets)::get_data(UpdatedFrames, 'Onion', type-Type), Types),
+		list::sort(Types, Sorted).
 
 :- end_object.
