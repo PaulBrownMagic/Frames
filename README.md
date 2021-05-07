@@ -36,14 +36,13 @@ subsumption. You can re-use these as you wish, or create your own for your
 use-case and set it as a daemon.
 
 ## Adding daemons
-Daemons are added as facets to `frames`. Simply choose the correct protocol,
-implement it as an object, and pass that object as a facet. The test-case
+Daemons are added as facets to `frames`. Simply choose the correct protocol and
+implement it as an object. The test-case
 `calculate_attrs` is a good example. It works like so:
 
 ```prolog
 :- object(height_calculator,
-	implements(calculator_protocol),
-	imports(slimowl_inheritance)).
+	implements(calculator_protocol)).
 
 	calculate(Frames, Subject, height(inches), Height) :-
 		frames::get_slot(Frames, Subject, height-Height).
@@ -55,11 +54,10 @@ implement it as an object, and pass that object as a facet. The test-case
 :- end_object.
 ```
 
-This is then added as a facet, enabling these queries:
+This is then available as a facet, enabling these queries:
 
 ```prolog
-?- avltree::as_dictionary([reader-height_calculator], Facets),
-   frames(Facets)::get_frame(TestDBFrames, 'Carrot', [height(inches)-Inches, height(cm)-CM]).
+   frames::get_frame(TestDBFrames, 'Carrot', [height(inches)-Inches, height(cm)-CM]).
 
 Inches = 12,
 CM = 30.48 .
