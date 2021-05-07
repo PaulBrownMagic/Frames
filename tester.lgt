@@ -7,7 +7,7 @@
 	]),
 	logtalk_load(lgtunit(loader)),
 	logtalk_load([
-		reader_protocol,
+		calculate_protocol,
 		frames,
 		slimowl_inheritance
 	], [
