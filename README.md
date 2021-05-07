@@ -36,9 +36,8 @@ subsumption. You can re-use these as you wish, or create your own for your
 use-case and set it as a daemon.
 
 ## Adding daemons
-Daemons are added as facets to `frames`. Simply choose the correct protocol and
-implement it as an object. The test-case
-`calculate_attrs` is a good example. It works like so:
+Daemons are added as facets to `frames`. Simply implement the `calculate_protocol` as an object.
+The test-case `calculate_attrs` is a good example. It works like so:
 
 ```prolog
 :- object(height_calculator,
@@ -69,12 +68,21 @@ predicate-language-value order), you might find it useful to create a
 calculator interface into which you import your different kinds of calculators.
 In this way you can compose sophisticated knowledge bases.
 
+For other daemons, such as typical `on-add` or `on-delete` daemons, it's
+suggested that you use Logtalks event-driven programming mechanism as these
+daemons execute either before or after a CRUD call.
+
 ## Frame queries
 By CRUD:
 
 ### Create
 
-- Not yet
+- `add_frame/4` : `add_frame(OldFrames, Subject, [KeyValuePairs], NewFrames)`,
+   adds the values at a key to subject. `KeyValuePairs` can be `Key-NewValue`
+   or `Key-OldValue to NewValue` so that the OldValue can be unified or
+   checked. Handles both single values and lists.
+- WIP: Add whole new subject
+
 
 ### Read
 
@@ -89,7 +97,10 @@ By CRUD:
 
 ### Update
 
-- WIP: Single values supported but not lists yet
+- `update_frame/4` : `update_frame(OldFrames, Subject, [KeyValuePairs], NewFrames)`,
+   updates the values at a key in subject. `KeyValuePairs` can be `Key-NewValue`
+   or `Key-OldValue to NewValue` so that the OldValue can be unified or
+   checked. Handles both single values and lists.
 
 ### Delete
 
@@ -97,5 +108,9 @@ By CRUD:
 	whole frame from the collection, providing the new collection. Only deletes
 	the frame, it doesn't delete references to the frame. WIP: No daemon support
 	yet.
-- WIP: Single values supported but not lists yet
+- `delete_frame/4`: `delete_frame(OldFrames, Subject, [KeyValuePairs], NewFrames)`,
+   deletes the `Key-Value` pairs from the frame. If the values at the key are a
+   list, then only the element is deleted. If the value at the key isn't a list
+   or if it's the last one, then the whole key is deleted.
+
 - WIP: Purge frame, like delete frame but removing reference to it as well.
