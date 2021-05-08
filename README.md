@@ -111,3 +111,9 @@ By CRUD:
    deletes the `Key-Value` pairs from the frame. If the values at the key are a
    list, then only the element is deleted. If the value at the key isn't a list
    or if it's the last one, then the whole key is deleted.
+
+## See Also
+
+- [Frames Persistency](https://github.com/PaulBrownMagic/FramesPersistency), a
+  plugin that when loaded will manage basic, to disk persistency for use with
+  this frames framework.

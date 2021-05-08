@@ -69,8 +69,8 @@
     },
     "Basil": {
         "type": [
-            "NamedIndividual",
-            "Herb"
+            "Herb",
+            "NamedIndividual"
         ],
         "spacing": [4],
         "family": ["Mint"],
@@ -78,8 +78,8 @@
     },
     "Chive": {
         "type": [
-            "NamedIndividual",
-            "Herb"
+            "Herb",
+            "NamedIndividual"
         ],
         "spacing": [1],
         "family": ["Lily"],
@@ -87,8 +87,8 @@
     },
     "Mint": {
         "type": [
-            "NamedIndividual",
-            "Herb"
+            "Herb",
+            "NamedIndividual"
         ],
         "spacing": [1],
         "family": ["Mint"],
@@ -96,8 +96,8 @@
     },
     "Marigold": {
         "type": [
-            "NamedIndividual",
-            "Flower"
+            "Flower",
+            "NamedIndividual"
         ],
         "spacing": [4],
         "family": ["Daisy"],
@@ -105,8 +105,8 @@
     },
     "Petunia": {
         "type": [
-            "NamedIndividual",
-            "Flower"
+            "Flower",
+            "NamedIndividual"
         ],
         "spacing": [4],
         "family": ["Nightshade"],
@@ -114,8 +114,8 @@
     },
     "Salvia": {
         "type": [
-            "NamedIndividual",
-            "Flower"
+            "Flower",
+            "NamedIndividual"
         ],
         "spacing": [4],
         "family": ["Mint"],
