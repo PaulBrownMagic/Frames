@@ -19,11 +19,11 @@ representation.
 This framework expects the data to be represented in SPO format, meaning:
 
 ```
-{ subject: {predicate: object} }
+{ subject: {predicate: [objects]} }
 ```
 
-Where there can be many of each subject, predicate, or object. See
-`test_db.json` for an example. JSON is not required, but it does work well.
+Where there can be many of each subject, predicate, or objects, and objects is
+an ordered list (set). See `test_db.json` for an example. JSON is not required, but it does work well.
 
 In terms of the language used, two calculation categories are provided.
 `slimowl_inheritance` uses `type` to denote the slot describing
@@ -80,9 +80,8 @@ By CRUD:
 - `add_frame/4` : `add_frame(OldFrames, Subject, [KeyValuePairs], NewFrames)`,
    adds the values at a key to subject. `KeyValuePairs` can be `Key-NewValue`
    or `Key-OldValue to NewValue` so that the OldValue can be unified or
-   checked. Handles both single values and lists.
-- WIP: Add whole new subject
-
+   checked. Handles both single values and lists, as well as adding new
+   subjects.
 
 ### Read
 
@@ -112,5 +111,3 @@ By CRUD:
    deletes the `Key-Value` pairs from the frame. If the values at the key are a
    list, then only the element is deleted. If the value at the key isn't a list
    or if it's the last one, then the whole key is deleted.
-
-- WIP: Purge frame, like delete frame but removing reference to it as well.

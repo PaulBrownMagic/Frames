@@ -99,6 +99,11 @@
 		frames::update_frame(Frames, 'Basil', [spacing-4 to 1], UpdatedFrames),
 		frames::get_frame(UpdatedFrames, 'Basil', [spacing-Updated]).
 
+	test(update_key_value_old_value_bracketed, true(Updated == 1)) :-
+		test_collection(Frames),
+		frames::update_frame(Frames, 'Basil', [spacing-(4 to 1)], UpdatedFrames),
+		frames::get_frame(UpdatedFrames, 'Basil', [spacing-Updated]).
+
 	test(update_change_list_element, true(Sorted == ['Herb', 'NamedIndividual'])) :-
 		test_collection(Frames),
 		frames::update_frame(Frames, 'Onion', [type-'Vegetable' to 'Herb'], UpdatedFrames),
@@ -127,7 +132,7 @@
 
 	test(delete_key_value, true) :-
 		test_collection(Frames),
-		frames::delete_frame(Frames, 'Potato', [spacing-_, height-_], UpdatedFrames),
+		frames::delete_frame(Frames, 'Potato', [spacing-4, height-_], UpdatedFrames),
 		\+ frames::get_data(UpdatedFrames, 'Potato', spacing-_),
 		\+ frames::get_data(UpdatedFrames, 'Potato', height-_).
 
@@ -136,6 +141,10 @@
 		frames::delete_frame(Frames, 'Onion', [type-'Vegetable'], UpdatedFrames),
 		findall(Class, frames::get_data(UpdatedFrames, 'Onion', type-Class), Parents).
 
+	test(delete_element_unifies, true(Spacing == 4)) :-
+		test_collection(Frames),
+		frames::delete_frame(Frames, 'Potato', [spacing-Spacing], _).
+
 	% DELETING - Unhappy Paths
 	test(delete_key_value_mismatch, fail) :-
 		test_collection(Frames),
@@ -143,7 +152,7 @@
 
 	test(delete_var_subject, fail) :-
 		test_collection(Frames),
-		frames::delete_frame(Frames, Potato, [spacing-9, height-1], _UpdatedFrames).
+		frames::delete_frame(Frames, _Potato, [spacing-9, height-1], _UpdatedFrames).
 
 	test(delete_var_key, fail) :-
 		test_collection(Frames),
@@ -154,10 +163,27 @@
 		frames::delete_frame(Frames, 'Potato', [spacing-_Var, height-1], _UpdatedFrames).
 
 	% ADDING
+	test(add_new_frame_subject, true) :-
+		test_collection(Frames),
+		frames::add_frame(Frames, 'Rosemary', [], Updated),
+		frames::subjects(Updated, Subjects),
+		list::memberchk('Rosemary', Subjects).
+
+	test(add_new_frame_slots, true([Spacing, Height] == [1, 12])) :-
+		test_collection(Frames),
+		frames::add_frame(Frames, 'Rosemary', [spacing-1, height-12], Updated),
+		frames::get_frame(Updated, 'Rosemary', [spacing-Spacing, height-Height]).
+
 	test(add_new_slot, true(Season == summer)) :-
 		test_collection(Frames),
 		frames::add_frame(Frames, 'Tomato', [growing_season-summer], UpdatedFrames),
 		frames::get_frame(UpdatedFrames, 'Tomato', [growing_season-Season]).
+
+	test(add_dup_slot, true(Length == 2)) :-
+		test_collection(Frames),
+		frames::add_frame(Frames, 'Onion', [type-'Vegetable'], UpdatedFrames),
+		findall(Type, frames::get_data(UpdatedFrames, 'Onion', type-Type), Types),
+		list::length(Types, Length).
 
 	test(update_add_list_element, true(Sorted == ['Herb', 'NamedIndividual', 'Vegetable'])) :-
 		test_collection(Frames),
@@ -165,10 +191,14 @@
 		findall(Type, frames::get_data(UpdatedFrames, 'Onion', type-Type), Types),
 		list::sort(Types, Sorted).
 
+	test(add_already_exists_ignore, true(Frames == UpdatedFrames)) :-
+		test_collection(Frames),
+		frames::add_frame(Frames, 'Carrot', [height-12], UpdatedFrames).
+
 	% Adding - Unhappy Paths
 	test(add_var_subject, fail) :-
 		test_collection(Frames),
-		frames::add_frame(Frames, Potato, [spacing-9, height-1], _UpdatedFrames).
+		frames::add_frame(Frames, _Potato, [spacing-9, height-1], _UpdatedFrames).
 
 	test(add_var_key, fail) :-
 		test_collection(Frames),
@@ -177,5 +207,6 @@
 	test(add_var_value, fail) :-
 		test_collection(Frames),
 		frames::add_frame(Frames, 'Potato', [spacing-_Var, height-1], _UpdatedFrames).
+
 
 :- end_object.

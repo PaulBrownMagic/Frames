@@ -3,7 +3,7 @@
 	logtalk_load([
 		json(loader),
 		nested_dictionaries(loader),
-		meta(loader)
+		sets(loader)
 	]),
 	logtalk_load(lgtunit(loader)),
 	logtalk_load([

@@ -12,12 +12,14 @@
 	:- uses(navltree, [
 		insert_in/4,
 		lookup_in/3,
-		update_in/5,
+		update_in/4,
 		delete_in/4
 		]).
 	:- uses(avltree, [
 		keys/2,
-		lookup/3
+		lookup/3,
+		insert/4,
+		new/1 as new_dict/1
 		]).
 
 	:- public(subjects/2).
@@ -43,8 +45,13 @@
 		->  instantiation_error
 		;	var(Slots)
 		->	findall(Key-Value, get_slot(Collection, Subject, Key-Value), Slots)
-		;	meta::map(get_slot(Collection, Subject), Slots)
+		;	get_slots(Collection, Subject, Slots)
 		).
+
+	get_slots(_Collection, _Subject, []).
+	get_slots(Collection, Subject, [Slot|Slots]) :-
+		get_slot(Collection, Subject, Slot),
+		get_slots(Collection, Subject, Slots).
 
 	:- public(get_data/3).
 	:- mode(get_data(?nested_dictionary, ?atomic, ?pair), zero_or_more).
@@ -61,7 +68,8 @@
 	% Direct from frame
 	get_data(Collection, Subject, Key-Value) :-
 		lookup_in([Subject, Key], Values, Collection),
-		slot_value(Values, Value).
+		set::member(Value, Values).
+
 
 	:- public(get_slot/3).
 	:- mode(get_slot(?nested_dictionary, ?atomic, ?pair), zero_or_more).
@@ -82,17 +90,6 @@
 		current_object(Calc),
 		Calc::calculate(Collection, Subject, Key, Value).
 
-	:- public(slot_value/2).
-	:- mode(slot_value(+term, ?value), zero_or_more).
-	:- info(slot_value/2, [
-		comment is 'Extract the value from the slot',
-		argnames is ['SlotValue', 'Value']
-	]).
-	slot_value(Values, Value) :-
-		(	is_list(Values) % If it's a list
-		->  list::member(Value, Values)  % yield from it
-		;	Value = Values  % otherwise we've got it
-		).
 
 	:- public(update_frame/4).
 	:- mode(update_frame(++nested_dictionary, +atomic, ++list(pair), -nested_dictionary), zero_or_one).
@@ -102,20 +99,21 @@
 	]).
 	update_frame(OldFrames, _Subject, [], OldFrames).
 	update_frame(OldFrames, Subject, [Pair|UpdatePairs], NewFrames) :-
-		once((	Pair = Key-OldValue to NewValue
-			;	Pair = Key-NewValue
-			)),
+		once(unpack_pair(Pair, Key, OldValue, NewValue)),
 		update_frame_(OldFrames, Subject, Key, OldValue, NewValue, AccFrames),
 		update_frame(AccFrames, Subject, UpdatePairs, NewFrames).
 
 	update_frame_(OldFrames, Subject, Key, OldValue, NewValue, AccFrames) :-
+		% to set, and so on down the object
 		lookup_in([Subject, Key], Values, OldFrames),
-		(	is_list(Values)
-		->  nonvar(OldValue),
-			list::select(OldValue, Values, NewValue, NewValues),
-			update_in(OldFrames, [Subject, Key], _, NewValues, AccFrames)
-		;	update_in(OldFrames, [Subject, Key], OldValue, NewValue, AccFrames)
-		).
+		set::select(OldValue, Values, Subtracted),
+		set::insert(Subtracted, NewValue, NewValues),
+		update_in(OldFrames, [Subject, Key], NewValues, AccFrames).
+
+    unpack_pair(Key-OldValue to NewValue, Key, OldValue, NewValue) :-
+		nonvar(OldValue).
+    unpack_pair(Key-NewValue, Key, _OldValue, NewValue) :-
+		NewValue \= _ to _.
 
 	:- public(delete_frame/3).
 	:- mode(delete_frame(++nested_dictionary, +atomic, -nested_dictionary), one).
@@ -139,13 +137,10 @@
 
 	delete_frame_(OldFrames, Subject, Key, Value, AccFrames):-
 		lookup_in([Subject, Key], Values, OldFrames),
-		(	is_list(Values)
-		->	(	Values = [Value]
-			->	delete_in(OldFrames, [Subject, Key], Values, AccFrames)
-			;	list::select(Value, Values, Deleted),
-				update_in(OldFrames, [Subject, Key], Values, Deleted, AccFrames)
-			)
-		;	delete_in(OldFrames, [Subject, Key], Value, AccFrames)
+		set::select(Value, Values, Subtracted),
+		(	set::empty(Subtracted)
+		->	delete_in(OldFrames, [Subject, Key], Values, AccFrames)
+		;	update_in(OldFrames, [Subject, Key], Subtracted, AccFrames)
 		).
 
 	:- public(add_frame/4).
@@ -154,16 +149,26 @@
 		comment is 'Add to the ``FrameCollection`` so that the slots described by ``Subject`` are as described by the key-value pairs',
 		argnames is ['OldFrames', 'Subject', 'UpdatePairs', 'NewFrames']
 	]).
-	add_frame(OldFrames, _Subject, [], OldFrames).
-	add_frame(OldFrames, Subject, [Key-NewValue|UpdatePairs], NewFrames) :-
-		ground([Subject, Key, NewValue]),
-		add_frame_(OldFrames, Subject, Key, NewValue, AccFrames),
-		add_frame(AccFrames, Subject, UpdatePairs, NewFrames).
+	add_frame(OldFrames, Subject, Slots, NewFrames) :-
+		atomic(Subject),
+		(	lookup(Subject, _, OldFrames)
+		->	OldFrames = AccFrames
+		;	new_dict(Empty),
+			insert(OldFrames, Subject, Empty, AccFrames)
+		),
+		add_frame_slots(AccFrames, Subject, Slots, NewFrames).
 
-	add_frame_(OldFrames, Subject, Key, NewValue, AccFrames) :-
-		(	lookup_in([Subject, Key], Values, OldFrames), is_list(Values)
-		->	insert_in(OldFrames, [Subject, Key], [NewValue|Values], AccFrames)
-		;	insert_in(OldFrames, [Subject, Key], NewValue, AccFrames)
+	add_frame_slots(OldFrames, _Subject, [], OldFrames).
+	add_frame_slots(OldFrames, Subject, [Key-NewValue|UpdatePairs], NewFrames) :-
+		ground([Subject, Key, NewValue]),
+		add_frame_slots_(OldFrames, Subject, Key, NewValue, AccFrames),
+		add_frame_slots(AccFrames, Subject, UpdatePairs, NewFrames).
+
+	add_frame_slots_(OldFrames, Subject, Key, NewValue, AccFrames) :-
+		(	lookup_in([Subject, Key], Values, OldFrames)
+		->	set::insert(Values, NewValue, Updated),
+			update_in(OldFrames, [Subject, Key], Updated, AccFrames)
+		;   insert_in(OldFrames, [Subject, Key], [NewValue], AccFrames)
 		).
 
 :- end_object.
