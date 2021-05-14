@@ -22,6 +22,15 @@
 		new/1 as new_dict/1
 		]).
 
+	:- public(new/1).
+	:- mode(new(--nested_dictionary), zero_or_more).
+	:- info(new/1, [
+		comment is 'An empty collection of frames',
+		argnames is ['EmptyFrameCollection']
+	]).
+	new(Frames) :-
+		new_dict(Frames).
+
 	:- public(subjects/2).
 	:- mode(subjects(++nested_dictionary, -list), one).
 	:- info(subjects/2, [
@@ -42,7 +51,7 @@
 	]).
 	get_frame(Collection, Subject, Slots) :-
 		(	var(Collection)
-		->  instantiation_error
+		->	instantiation_error
 		;	var(Slots)
 		->	findall(Key-Value, get_slot(Collection, Subject, Key-Value), Slots)
 		;	get_slots(Collection, Subject, Slots)
@@ -110,9 +119,9 @@
 		set::insert(Subtracted, NewValue, NewValues),
 		update_in(OldFrames, [Subject, Key], NewValues, AccFrames).
 
-    unpack_pair(Key-OldValue to NewValue, Key, OldValue, NewValue) :-
+	unpack_pair(Key-OldValue to NewValue, Key, OldValue, NewValue) :-
 		nonvar(OldValue).
-    unpack_pair(Key-NewValue, Key, _OldValue, NewValue) :-
+	unpack_pair(Key-NewValue, Key, _OldValue, NewValue) :-
 		NewValue \= _ to _.
 
 	:- public(delete_frame/3).
@@ -168,7 +177,7 @@
 		(	lookup_in([Subject, Key], Values, OldFrames)
 		->	set::insert(Values, NewValue, Updated),
 			update_in(OldFrames, [Subject, Key], Updated, AccFrames)
-		;   insert_in(OldFrames, [Subject, Key], [NewValue], AccFrames)
+		;	insert_in(OldFrames, [Subject, Key], [NewValue], AccFrames)
 		).
 
 :- end_object.

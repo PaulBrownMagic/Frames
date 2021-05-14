@@ -1,4 +1,4 @@
-:- category(classic_inheritance,
+:- object(classic_inheritance,
 	implements(calculate_protocol)).
 
 	:- info([
@@ -18,4 +18,8 @@
 		frames::get_data(Frames, Subject, ako-Parent), % find its parents
 		frames::get_slot(Frames, Parent, Key-Value).  % inherit
 
-:- end_category.
+	% reflexive
+	calculate(Frames, Subject, ako, Subject) :-
+		frames::get_data(Frames, Subject, ako-_).
+
+:- end_object.

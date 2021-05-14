@@ -77,6 +77,7 @@ By CRUD:
 
 ### Create
 
+- `new/1` : `new(FrameCollection)` is to get a new, empty collection of frames
 - `add_frame/4` : `add_frame(OldFrames, Subject, [KeyValuePairs], NewFrames)`,
    adds the values at a key to subject. `KeyValuePairs` can be `Key-NewValue`
    or `Key-OldValue to NewValue` so that the OldValue can be unified or
