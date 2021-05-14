@@ -68,9 +68,8 @@ predicate-language-value order), you might find it useful to create a
 calculator interface into which you import your different kinds of calculators.
 In this way you can compose sophisticated knowledge bases.
 
-For other daemons, such as typical `on-add` or `on-delete` daemons, it's
-suggested that you use Logtalks event-driven programming mechanism as these
-daemons execute either before or after a CRUD call.
+For other daemons, check `daemon_protocols` to find supported predicates, they
+work in the same way (with the plugin-architecture).
 
 ## Frame queries
 By CRUD:

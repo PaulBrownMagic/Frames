@@ -54,7 +54,7 @@
 			[family-Family,
 			spacing-Spacing]).
 
-	test(list_slots, true(Types == ['NamedIndividual', 'Herb'])):-
+	test(list_slots, true(Types == ['Herb', 'NamedIndividual'])):-
 		test_collection(Frames),
 		findall(Type, frames::get_frame(Frames, 'Mint', [type-Type]), Types).
 

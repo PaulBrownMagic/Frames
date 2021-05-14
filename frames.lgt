@@ -3,7 +3,7 @@
 :- object(frames).
 
 	:- info([
-		version is 1:0:0,
+		version is 1:0:1,
 		author is 'Paul Brown',
 		date is 2021-04-23,
 		comment is 'A Frame Collection is a dataset consisting of frames'
@@ -79,7 +79,6 @@
 		lookup_in([Subject, Key], Values, Collection),
 		set::member(Value, Values).
 
-
 	:- public(get_slot/3).
 	:- mode(get_slot(?nested_dictionary, ?atomic, ?pair), zero_or_more).
 	:- info(get_slot/3, [
@@ -95,8 +94,7 @@
 	get_slot(Collection, Subject, Key-Value) :-
 		get_data(Collection, Subject, Key-Value).
 	get_slot(Collection, Subject, Key-Value) :-
-		conforms_to_protocol(Calc, calculate_protocol),
-		current_object(Calc),
+		daemon_for(Calc, calculate_protocol),
 		Calc::calculate(Collection, Subject, Key, Value).
 
 
@@ -106,10 +104,12 @@
 		comment is 'Update the ``FrameCollection`` so that the slots described by ``Subject`` are as described by the key-value pairs',
 		argnames is ['OldFrames', 'Subject', 'UpdatePairs', 'NewFrames']
 	]).
-	update_frame(OldFrames, _Subject, [], OldFrames).
+	update_frame(OldFrames, Subject, [], NewFrames) :-
+		daemon_after_update(OldFrames, Subject, NewFrames).
 	update_frame(OldFrames, Subject, [Pair|UpdatePairs], NewFrames) :-
 		once(unpack_pair(Pair, Key, OldValue, NewValue)),
-		update_frame_(OldFrames, Subject, Key, OldValue, NewValue, AccFrames),
+		update_frame_(OldFrames, Subject, Key, OldValue, NewValue, AccFrames0),
+		daemon_after_update(AccFrames0, Subject, Key, OldValue, NewValue, AccFrames),
 		update_frame(AccFrames, Subject, UpdatePairs, NewFrames).
 
 	update_frame_(OldFrames, Subject, Key, OldValue, NewValue, AccFrames) :-
@@ -131,7 +131,8 @@
 		argnames is ['OldFrames', 'Subject', 'NewFrames']
 	]).
 	delete_frame(OldFrames, Subject, NewFrames) :-
-		delete_in(OldFrames, [Subject], _Slots, NewFrames).
+		delete_in(OldFrames, [Subject], _Slots, AccFrames),
+		daemon_after_delete_frame(AccFrames, Subject, NewFrames).
 
 	:- public(delete_frame/4).
 	:- mode(delete_frame(++nested_dictionary, +atomic, +list(pair), -nested_dictionary), one).
@@ -139,9 +140,11 @@
 		comment is 'Delete the pairs associated with ``Subject`` from the frames. Keys must be ground, values will unify.',
 		argnames is ['OldFrames', 'Subject', 'Pairs', 'NewFrames']
 	]).
-	delete_frame(OldFrames, _Subject, [], OldFrames).
+	delete_frame(OldFrames, Subject, [], NewFrames) :-
+		daemon_after_delete_slots(OldFrames, Subject, NewFrames).
 	delete_frame(OldFrames, Subject, [Key-Value|DeletePairs], NewFrames) :-
-		delete_frame_(OldFrames, Subject, Key, Value, AccFrames),
+		delete_frame_(OldFrames, Subject, Key, Value, AccFrames0),
+		daemon_after_delete_slot(AccFrames0, Subject, Key, Value, AccFrames),
 		delete_frame(AccFrames, Subject, DeletePairs, NewFrames).
 
 	delete_frame_(OldFrames, Subject, Key, Value, AccFrames):-
@@ -165,12 +168,14 @@
 		;	new_dict(Empty),
 			insert(OldFrames, Subject, Empty, AccFrames)
 		),
-		add_frame_slots(AccFrames, Subject, Slots, NewFrames).
+		add_frame_slots(AccFrames, Subject, Slots, AccFrames0),
+		daemon_after_add(AccFrames0, Subject, NewFrames).
 
 	add_frame_slots(OldFrames, _Subject, [], OldFrames).
 	add_frame_slots(OldFrames, Subject, [Key-NewValue|UpdatePairs], NewFrames) :-
 		ground([Subject, Key, NewValue]),
-		add_frame_slots_(OldFrames, Subject, Key, NewValue, AccFrames),
+		add_frame_slots_(OldFrames, Subject, Key, NewValue, AccFrames0),
+		daemon_after_add(AccFrames0, Subject, Key, NewValue, AccFrames),
 		add_frame_slots(AccFrames, Subject, UpdatePairs, NewFrames).
 
 	add_frame_slots_(OldFrames, Subject, Key, NewValue, AccFrames) :-
@@ -179,5 +184,79 @@
 			update_in(OldFrames, [Subject, Key], Updated, AccFrames)
 		;	insert_in(OldFrames, [Subject, Key], [NewValue], AccFrames)
 		).
+
+
+	% Daemons
+
+	% util ignore/2 is ignore but falls back to a default
+	:- meta_predicate(ignore(*, *)).
+	ignore(Call, Default) :-
+		once((Call ; Default)).
+
+	% find
+	daemons_for(Daemons, Protocol) :-
+		findall(Daemon, daemon_for(Daemon, Protocol), Daemons).
+	daemon_for(Daemon, Protocol) :-
+		conforms_to_protocol(Daemon, Protocol),
+		current_object(Daemon).
+
+	% add
+	daemon_after_add(OldFrames, Subject, NewFrames) :-
+		daemons_for(Daemons, frames_on_add),
+		daemon_after_add_(Daemons, OldFrames, Subject, NewFrames).
+	daemon_after_add_([], OldFrames, _Subject, OldFrames).
+	daemon_after_add_([Daemon|Daemons], OldFrames, Subject, NewFrames) :-
+		ignore(Daemon::after_add(OldFrames, Subject, AccFrames), OldFrames = AccFrames),
+		daemon_after_add_(Daemons, AccFrames, Subject, NewFrames).
+
+	daemon_after_add(OldFrames, Subject, Slot, Value, NewFrames) :-
+		daemons_for(Daemons, frames_on_add),
+		daemon_after_add_(Daemons, OldFrames, Subject, Slot, Value, NewFrames).
+	daemon_after_add_([], OldFrames, _Subject, _Slot, _Value, OldFrames).
+	daemon_after_add_([Daemon|Daemons], OldFrames, Subject, Slot, Value, NewFrames) :-
+		ignore(Daemon::after_add(OldFrames, Subject, Slot, Value, AccFrames), OldFrames = AccFrames),
+		daemon_after_add_(Daemons, AccFrames, Subject, Slot, Value, NewFrames).
+
+	% update
+	daemon_after_update(OldFrames, Subject, NewFrames) :-
+		daemons_for(Daemons, frames_on_update),
+		daemon_after_update_(Daemons, OldFrames, Subject, NewFrames).
+	daemon_after_update_([], OldFrames, _Subject, OldFrames).
+	daemon_after_update_([Daemon|Daemons], OldFrames, Subject, NewFrames) :-
+		ignore(Daemon::after_update(OldFrames, Subject, AccFrames), OldFrames = AccFrames),
+		daemon_after_update_(Daemons, AccFrames, Subject, NewFrames).
+
+	daemon_after_update(OldFrames, Subject, Slot, OldValue, NewValue, NewFrames) :-
+		daemons_for(Daemons, frames_on_update),
+		daemon_after_update_(Daemons, OldFrames, Subject, Slot, OldValue, NewValue, NewFrames).
+	daemon_after_update_([], OldFrames, _Subject, _Slot, _OldValue, _NewValue, OldFrames).
+	daemon_after_update_([Daemon|Daemons], OldFrames, Subject, Slot, OldValue, NewValue, NewFrames) :-
+		ignore(Daemon::after_update(OldFrames, Subject, Slot, OldValue, NewValue, AccFrames), OldFrames = AccFrames),
+		daemon_after_update_(Daemons, AccFrames, Subject, Slot, OldValue, NewValue, NewFrames).
+
+	% delete
+	daemon_after_delete_frame(OldFrames, Subject, NewFrames) :-
+		daemons_for(Daemons, frames_on_delete),
+		daemon_after_delete_frame_(Daemons, OldFrames, Subject, NewFrames).
+	daemon_after_delete_frame_([], OldFrames, _Subject, OldFrames).
+	daemon_after_delete_frame_([Daemon|Daemons], OldFrames, Subject, NewFrames) :-
+		ignore(Daemon::after_delete_frame(OldFrames, Subject, AccFrames), OldFrames = AccFrames),
+		daemon_after_delete_frame_(Daemons, AccFrames, Subject, NewFrames).
+
+	daemon_after_delete_slots(OldFrames, Subject, NewFrames) :-
+		daemons_for(Daemons, frames_on_delete),
+		daemon_after_delete_slots_(Daemons, OldFrames, Subject, NewFrames).
+	daemon_after_delete_slots_([], OldFrames, _Subject, OldFrames).
+	daemon_after_delete_slots_([Daemon|Daemons], OldFrames, Subject, NewFrames) :-
+		ignore(Daemon::after_delete_slots(OldFrames, Subject, AccFrames), OldFrames = AccFrames),
+		daemon_after_delete_slots_(Daemons, AccFrames, Subject, NewFrames).
+
+	daemon_after_delete_slot(OldFrames, Subject, Slot, Value, NewFrames) :-
+		daemons_for(Daemons, frames_on_delete),
+		daemon_after_delete_slot_(Daemons, OldFrames, Subject, Slot, Value, NewFrames).
+	daemon_after_delete_slot_([], OldFrames, _Subject, _Slot, _Value, OldFrames).
+	daemon_after_delete_slot_([Daemon|Daemons], OldFrames, Subject, Slot, Value, NewFrames) :-
+		ignore(Daemon::after_delete_slot(OldFrames, Subject, Slot, Value, AccFrames), OldFrames = AccFrames),
+		daemon_after_delete_slot_(Daemons, AccFrames, Subject, Slot, Value, NewFrames).
 
 :- end_object.
