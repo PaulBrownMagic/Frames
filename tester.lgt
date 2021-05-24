@@ -8,6 +8,8 @@
 	logtalk_load(lgtunit(loader)),
 	logtalk_load([
 		daemon_protocols,
+		frames_category,
+		aggregate_daemons,
 		frames,
 		slimowl_inheritance
 	], [

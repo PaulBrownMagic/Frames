@@ -5,6 +5,8 @@
 	]),
 	logtalk_load([
 		daemon_protocols,
+		frames_category,
+		aggregate_daemons,
 		frames
 	],
 	[
